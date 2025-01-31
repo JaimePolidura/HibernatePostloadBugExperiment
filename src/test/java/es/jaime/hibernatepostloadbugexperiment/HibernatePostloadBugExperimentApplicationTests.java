@@ -11,33 +11,36 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest
 class HibernatePostloadBugExperimentApplicationTests {
+  @Autowired
+  private TransactionTemplate trasactions;
   @Autowired
   private EntityManager entityManager;
 
   @BeforeEach
   @Transactional
   public void setup() {
-    entityManager.createQuery("DELETE FROM Parent").executeUpdate();
-    entityManager.createQuery("DELETE FROM Child").executeUpdate();
+    trasactions.executeWithoutResult(s -> {
+      entityManager.createQuery("DELETE FROM Child").executeUpdate();
+      entityManager.createQuery("DELETE FROM Parent").executeUpdate();
+    });
   }
 
   @Test
-  @Transactional
   void contextLoads() {
     Parent parent = new Parent();
-    entityManager.persist(parent);
+    trasactions.executeWithoutResult(s -> entityManager.persist(parent));
 
-    entityManager.persist(new Child(1, parent));
-    entityManager.persist(new Child(2, parent));
-    entityManager.persist(new Child(3, parent));
+    trasactions.executeWithoutResult(s -> entityManager.persist(new Child(1, parent)));
+    trasactions.executeWithoutResult(s -> entityManager.persist(new Child(2, parent)));
+    trasactions.executeWithoutResult(s -> entityManager.persist(new Child(3, parent)));
 
-    entityManager.flush();
-    entityManager.clear();
+    List<Child> children = trasactions.execute(t ->
+        entityManager.createQuery("SELECT c FROM Child c").getResultList());
 
-    List<Child> children = entityManager.createQuery("SELECT c FROM Child c").getResultList();
     assertEquals(3, children.size());
   }
 }
