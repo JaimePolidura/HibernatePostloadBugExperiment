@@ -16,14 +16,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 @SpringBootTest
 class HibernatePostloadBugExperimentApplicationTests {
   @Autowired
-  private TransactionTemplate trasactions;
+  private TransactionTemplate transactions;
   @Autowired
   private EntityManager entityManager;
 
   @BeforeEach
-  @Transactional
   public void setup() {
-    trasactions.executeWithoutResult(s -> {
+    transactions.executeWithoutResult(s -> {
       entityManager.createQuery("DELETE FROM Child").executeUpdate();
       entityManager.createQuery("DELETE FROM Parent").executeUpdate();
     });
@@ -32,13 +31,13 @@ class HibernatePostloadBugExperimentApplicationTests {
   @Test
   void contextLoads() {
     Parent parent = new Parent();
-    trasactions.executeWithoutResult(s -> entityManager.persist(parent));
+    transactions.executeWithoutResult(s -> entityManager.persist(parent));
 
-    trasactions.executeWithoutResult(s -> entityManager.persist(new Child(1, parent)));
-    trasactions.executeWithoutResult(s -> entityManager.persist(new Child(2, parent)));
-    trasactions.executeWithoutResult(s -> entityManager.persist(new Child(3, parent)));
+    transactions.executeWithoutResult(s -> entityManager.persist(new Child(1, parent)));
+    transactions.executeWithoutResult(s -> entityManager.persist(new Child(2, parent)));
+    transactions.executeWithoutResult(s -> entityManager.persist(new Child(3, parent)));
 
-    List<Child> children = trasactions.execute(t ->
+    List<Child> children = transactions.execute(t ->
         entityManager.createQuery("SELECT c FROM Child c").getResultList());
 
     assertEquals(3, children.size());
